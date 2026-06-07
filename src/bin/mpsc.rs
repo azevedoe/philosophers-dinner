@@ -1,8 +1,16 @@
+mod bench_config {
+    #![allow(dead_code)]
+    include!("../bench_config.rs");
+}
+
 use std::sync::Arc;
 use std::time::Instant;
+
 use tokio::sync::mpsc::{self, Sender};
 use tokio::sync::Mutex;
-use tokio::time;
+use tokio::time::{self, Duration};
+
+use bench_config::*;
 
 struct Fork;
 
@@ -16,7 +24,8 @@ struct Philosopher {
 impl Philosopher {
     async fn think(&self) {
         println!("{} está pensando...", self.name);
-        time::sleep(time::Duration::from_millis(1)).await;
+        time::sleep(Duration::from_millis(THINK_MS)).await;
+
         self.thoughts
             .send(format!("Eureka! {} tem uma nova ideia!", &self.name))
             .await
@@ -24,74 +33,73 @@ impl Philosopher {
     }
 
     async fn eat(&self) {
-        // Continue tentando até termos ambos os garfos
         let (_left_fork, _right_fork) = loop {
-            // Peguem os garfos...
             let left_fork = self.left_fork.try_lock();
             let right_fork = self.right_fork.try_lock();
+
             let Ok(left_fork) = left_fork else {
-                // Se não pegamos o garfo esquerdo, solte o garfo direito se o
-                // tivermos e deixe outras tarefas progredirem.
                 drop(right_fork);
-                time::sleep(time::Duration::from_millis(1)).await;
+                time::sleep(Duration::from_millis(TRY_LOCK_RETRY_MS)).await;
                 continue;
             };
+
             let Ok(right_fork) = right_fork else {
-                // Se não pegamos o garfo direito, solte o garfo esquerdo e deixe
-                // outras tarefas progredirem.
                 drop(left_fork);
-                time::sleep(time::Duration::from_millis(1)).await;
+                time::sleep(Duration::from_millis(TRY_LOCK_RETRY_MS)).await;
                 continue;
             };
+
             break (left_fork, right_fork);
         };
 
         println!("{} está comendo...", &self.name);
-        time::sleep(time::Duration::from_millis(5)).await;
-
-        // Os _locks_ são descartados aqui
+        time::sleep(Duration::from_millis(EAT_MS)).await;
+        println!("{} terminou de comer", self.name);
     }
 }
 
-static PHILOSOPHERS: &[&str] = &["Sócrates", "Kant", "Platão", "Aristóteles", "Pitágoras"];
+fn print_run_config() {
+    println!("=== mpsc (tasks + canal) ===");
+    println!(
+        "THINK_MS={THINK_MS} EAT_MS={EAT_MS} CYCLES={CYCLES} TRY_LOCK_RETRY_MS={TRY_LOCK_RETRY_MS} \
+         filósofos={}",
+        PHILOSOPHERS.len()
+    );
+}
 
 #[tokio::main]
 async fn main() {
+    print_run_config();
     let start = Instant::now();
 
-    // Criem os garfos
     let mut forks = vec![];
     (0..PHILOSOPHERS.len()).for_each(|_| forks.push(Arc::new(Mutex::new(Fork))));
 
-    // Criem os filósofos
     let (philosophers, mut rx) = {
         let mut philosophers = vec![];
-        let (tx, rx) = mpsc::channel(10);
+        let (tx, rx) = mpsc::channel(MPSC_CHANNEL_BUFFER);
+
         for (i, name) in PHILOSOPHERS.iter().enumerate() {
-            let left_fork = Arc::clone(&forks[i]);
-            let right_fork = Arc::clone(&forks[(i + 1) % PHILOSOPHERS.len()]);
             philosophers.push(Philosopher {
                 name: name.to_string(),
-                left_fork,
-                right_fork,
+                left_fork: Arc::clone(&forks[i]),
+                right_fork: Arc::clone(&forks[(i + 1) % PHILOSOPHERS.len()]),
                 thoughts: tx.clone(),
             });
         }
+
         (philosophers, rx)
-        // tx é descartado aqui, então não precisamos descartá-lo explicitamente mais tarde
     };
 
-    // Faça-os pensar e comer
     for phil in philosophers {
         tokio::spawn(async move {
-            for _ in 0..1 {
+            for _ in 0..CYCLES {
                 phil.think().await;
                 phil.eat().await;
             }
         });
     }
 
-    // Imprimam seus pensamentos
     while let Some(thought) = rx.recv().await {
         println!("Aqui está um pensamento: {thought}");
     }
