@@ -1,6 +1,6 @@
 # Philosopher
 
-Implementação do problema do **Jantar dos Filósofos** em Rust, com duas abordagens de sincronização usando [Tokio](https://tokio.rs/).
+Implementação do problema do **Jantar dos Filósofos** em Rust, com três abordagens de sincronização.
 
 ## Pré-requisitos
 
@@ -14,9 +14,9 @@ Clone o repositório e entre na pasta do projeto:
 cd philosopher
 ```
 
-### Memória compartilhada (`Arc` + `Mutex`)
+### Memória compartilhada — std (`Arc` + `Mutex`)
 
-Versão padrão do projeto. Os filósofos compartilham garfos via `Arc<Mutex<Fork>>` e evitam deadlock ordenando a aquisição dos locks.
+Versão padrão do projeto, usando apenas a biblioteca padrão (`std::thread`, `std::sync::Mutex`). Os filósofos compartilham garfos via `Arc<Mutex<Fork>>` e evitam deadlock ordenando a aquisição dos locks.
 
 ```bash
 cargo run --bin shared_memory
@@ -28,9 +28,17 @@ Ou simplesmente:
 cargo run
 ```
 
+### Memória compartilhada — Tokio (`Arc` + `Mutex` async)
+
+Mesma lógica da versão std, mas com [Tokio](https://tokio.rs/) (`tokio::spawn`, `tokio::sync::Mutex`, `tokio::time::sleep`).
+
+```bash
+cargo run --bin shared_memory_tokio
+```
+
 ### Canais MPSC
 
-Versão alternativa que usa canais assíncronos (`mpsc`) para comunicar os pensamentos dos filósofos e `try_lock` para pegar os garfos.
+Versão que usa canais assíncronos (`mpsc`) para comunicar os pensamentos dos filósofos e `try_lock` para pegar os garfos.
 
 ```bash
 cargo run --bin mpsc
@@ -38,12 +46,13 @@ cargo run --bin mpsc
 
 ## Binários disponíveis
 
+| Binário               | Descrição                                              |
+| --------------------- | ------------------------------------------------------ |
+| `shared_memory`       | `Arc` + `Mutex` com threads std (padrão)               |
+| `shared_memory_tokio` | `Arc` + `Mutex` async com Tokio                        |
+| `mpsc`                | Canais MPSC + `try_lock` com Tokio                     |
 
-| Binário         | Descrição                                  |
-| --------------- | ------------------------------------------ |
-| `shared_memory` | Sincronização com `Arc` + `Mutex` (padrão) |
-| `mpsc`          | Sincronização com canais MPSC e `try_lock` |
-
+Ao final de cada execução, o tempo total é exibido no terminal (`Tempo total: ...`).
 
 ## Outros comandos úteis
 
@@ -53,8 +62,8 @@ cargo build
 
 # Executar em modo release (otimizado)
 cargo run --release --bin shared_memory
+cargo run --release --bin shared_memory_tokio
 
 # Rodar os testes
 cargo test
 ```
-
