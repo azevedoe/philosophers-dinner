@@ -1,16 +1,4 @@
 // Parâmetros compartilhados para comparar os 3 binários com as mesmas condições.
-//
-// Ajuste os valores abaixo, salve e rode:
-//
-//   cargo run --bin shared_memory
-//   cargo run --bin shared_memory_tokio
-//   cargo run --bin mpsc
-//
-// Para medição mais estável, use release:
-//
-//   cargo run --release --bin shared_memory
-//   cargo run --release --bin shared_memory_tokio
-//   cargo run --release --bin mpsc
 
 /// Tempo simulado pensando (milissegundos).
 pub const THINK_MS: u64 = 100;
