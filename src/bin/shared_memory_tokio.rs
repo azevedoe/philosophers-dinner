@@ -15,7 +15,7 @@ struct Philosopher {
 impl Philosopher {
     async fn think(&self) {
         println!("{} está pensando...", self.name);
-        sleep(Duration::from_millis(500)).await;
+        sleep(Duration::from_millis(1)).await;
     }
 
     async fn eat(&self) {
@@ -29,7 +29,7 @@ impl Philosopher {
         let _right = second.lock().await;
 
         println!("{} está comendo...", self.name);
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(5)).await;
         println!("{} terminou de comer", self.name);
     }
 }

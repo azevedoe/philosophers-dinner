@@ -13,7 +13,7 @@ struct Philosopher {
 impl Philosopher {
     fn think(&self) {
         println!("{} está pensando...", self.name);
-        thread::sleep(Duration::from_millis(500));
+        thread::sleep(Duration::from_millis(1));
     }
 
     fn eat(&self) {
@@ -27,7 +27,7 @@ impl Philosopher {
         let _right = second.lock().unwrap();
 
         println!("{} está comendo...", self.name);
-        thread::sleep(Duration::from_millis(1000));
+        thread::sleep(Duration::from_millis(5));
         println!("{} terminou de comer", self.name);
     }
 }

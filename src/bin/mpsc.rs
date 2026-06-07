@@ -15,6 +15,8 @@ struct Philosopher {
 
 impl Philosopher {
     async fn think(&self) {
+        println!("{} está pensando...", self.name);
+        time::sleep(time::Duration::from_millis(1)).await;
         self.thoughts
             .send(format!("Eureka! {} tem uma nova ideia!", &self.name))
             .await
@@ -51,8 +53,7 @@ impl Philosopher {
     }
 }
 
-static PHILOSOPHERS: &[&str] =
-    &["Sócrates", "Hipátia", "Platão", "Aristóteles", "Pitágoras"];
+static PHILOSOPHERS: &[&str] = &["Sócrates", "Kant", "Platão", "Aristóteles", "Pitágoras"];
 
 #[tokio::main]
 async fn main() {
